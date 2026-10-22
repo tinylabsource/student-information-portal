@@ -1,12 +1,13 @@
 {
   "dependencies": {
     "cors": "^2.8.6",
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "mongodb": "^7.7.0"
   },
   "scripts": {
-  "start": "node server.js",
-  "dev": "nodemon server.js"
-},
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "nodemon --exec \"node --env-file-if-exists=.env server.js\""
+  },
   "devDependencies": {
     "nodemon": "^3.1.14"
   }

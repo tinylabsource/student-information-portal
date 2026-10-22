@@ -1,9 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-let students = require("../data/students");
-
-let nextId = Math.max(0, ...students.map(student => student.id)) + 1;
+const { getDb, nextStudentId, caseInsensitive } = require("../db");
 
 const fields = [
   "studentId",
@@ -22,9 +20,17 @@ const textFields = [
   "course"
 ];
 
+// Hide MongoDB's internal _id from API responses
+const hideMongoId = { projection: { _id: 0 } };
+
+const studentsCollection = async () =>
+  (await getDb()).collection("students");
+
 // Find a student by ID
-const findStudent = id =>
-  students.find(student => student.id === Number(id));
+async function findStudent(id) {
+  const students = await studentsCollection();
+  return students.findOne({ id: Number(id) }, hideMongoId);
+}
 
 // Validate and normalize student data
 function validateStudent(data) {
@@ -50,27 +56,60 @@ function validateStudent(data) {
   return null;
 }
 
-// Check for duplicate student IDs
-function hasDuplicateStudentId(studentId, excludeId = null) {
-  return students.some(student =>
-    student.id !== excludeId &&
-    student.studentId.toLowerCase() === studentId.toLowerCase()
-  );
+// Keep only known fields, trimmed and typed
+function normalizeStudent(data) {
+  return {
+    studentId: data.studentId.trim(),
+    firstName: data.firstName.trim(),
+    lastName: data.lastName.trim(),
+    email: data.email.trim(),
+    course: data.course.trim(),
+    yearLevel: Number(data.yearLevel)
+  };
 }
 
-// GET: List and search students
-router.get("/", (req, res) => {
-  const search = String(req.query.search || "").trim().toLowerCase();
+// Check for duplicate student IDs (case-insensitive)
+async function hasDuplicateStudentId(studentId, excludeId = null) {
+  const students = await studentsCollection();
+  const query = { studentId };
 
-  const result = students.filter(student =>
-    [
-      student.studentId,
-      student.firstName,
-      student.lastName,
-      student.email,
-      student.course
-    ].some(value => value.toLowerCase().includes(search))
-  );
+  if (excludeId !== null) query.id = { $ne: excludeId };
+
+  const count = await students.countDocuments(query, {
+    collation: caseInsensitive,
+    limit: 1
+  });
+
+  return count > 0;
+}
+
+const isDuplicateKeyError = err => err && err.code === 11000;
+
+const duplicateResponse = res =>
+  res.status(409).json({
+    success: false,
+    message: "Student ID already exists"
+  });
+
+const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// GET: List and search students
+router.get("/", async (req, res) => {
+  const search = String(req.query.search || "").trim();
+  const students = await studentsCollection();
+
+  const query = search
+    ? {
+        $or: textFields.map(field => ({
+          [field]: { $regex: escapeRegex(search), $options: "i" }
+        }))
+      }
+    : {};
+
+  const result = await students
+    .find(query, hideMongoId)
+    .sort({ id: 1 })
+    .toArray();
 
   res.json({
     success: true,
@@ -80,8 +119,8 @@ router.get("/", (req, res) => {
 });
 
 // GET: Get one student
-router.get("/:id", (req, res) => {
-  const student = findStudent(req.params.id);
+router.get("/:id", async (req, res) => {
+  const student = await findStudent(req.params.id);
 
   if (!student) {
     return res.status(404).json({
@@ -94,8 +133,8 @@ router.get("/:id", (req, res) => {
 });
 
 // POST: Add a student
-router.post("/", (req, res) => {
-  const error = validateStudent(req.body);
+router.post("/", async (req, res) => {
+  const error = validateStudent(req.body || {});
 
   if (error) {
     return res.status(400).json({
@@ -104,26 +143,21 @@ router.post("/", (req, res) => {
     });
   }
 
-  const data = {
-    ...req.body,
-    studentId: req.body.studentId.trim(),
-    firstName: req.body.firstName.trim(),
-    lastName: req.body.lastName.trim(),
-    email: req.body.email.trim(),
-    course: req.body.course.trim(),
-    yearLevel: Number(req.body.yearLevel)
-  };
+  const data = normalizeStudent(req.body);
 
-  if (hasDuplicateStudentId(data.studentId)) {
-    return res.status(409).json({
-      success: false,
-      message: "Student ID already exists"
-    });
+  if (await hasDuplicateStudentId(data.studentId)) {
+    return duplicateResponse(res);
   }
 
-  const student = { id: nextId++, ...data };
+  const db = await getDb();
+  const student = { id: await nextStudentId(db), ...data };
 
-  students.push(student);
+  try {
+    await db.collection("students").insertOne({ ...student });
+  } catch (err) {
+    if (isDuplicateKeyError(err)) return duplicateResponse(res);
+    throw err;
+  }
 
   res.status(201).json({
     success: true,
@@ -133,8 +167,8 @@ router.post("/", (req, res) => {
 });
 
 // PUT: Update a student
-router.put("/:id", (req, res) => {
-  const student = findStudent(req.params.id);
+router.put("/:id", async (req, res) => {
+  const student = await findStudent(req.params.id);
 
   if (!student) {
     return res.status(404).json({
@@ -161,8 +195,8 @@ router.put("/:id", (req, res) => {
     });
   }
 
-  const updated = { ...student, ...req.body };
-  const error = validateStudent(updated);
+  const merged = { ...student, ...req.body };
+  const error = validateStudent(merged);
 
   if (error) {
     return res.status(400).json({
@@ -171,23 +205,20 @@ router.put("/:id", (req, res) => {
     });
   }
 
-  updated.studentId = updated.studentId.trim();
-  updated.firstName = updated.firstName.trim();
-  updated.lastName = updated.lastName.trim();
-  updated.email = updated.email.trim();
-  updated.course = updated.course.trim();
-  updated.yearLevel = Number(updated.yearLevel);
+  const updated = { id: student.id, ...normalizeStudent(merged) };
 
-  if (hasDuplicateStudentId(updated.studentId, student.id)) {
-    return res.status(409).json({
-      success: false,
-      message: "Student ID already exists"
-    });
+  if (await hasDuplicateStudentId(updated.studentId, student.id)) {
+    return duplicateResponse(res);
   }
 
-  students = students.map(item =>
-    item.id === student.id ? updated : item
-  );
+  const students = await studentsCollection();
+
+  try {
+    await students.replaceOne({ id: student.id }, { ...updated });
+  } catch (err) {
+    if (isDuplicateKeyError(err)) return duplicateResponse(res);
+    throw err;
+  }
 
   res.json({
     success: true,
@@ -197,17 +228,16 @@ router.put("/:id", (req, res) => {
 });
 
 // DELETE: Remove a student
-router.delete("/:id", (req, res) => {
-  const student = findStudent(req.params.id);
+router.delete("/:id", async (req, res) => {
+  const students = await studentsCollection();
+  const result = await students.deleteOne({ id: Number(req.params.id) });
 
-  if (!student) {
+  if (result.deletedCount === 0) {
     return res.status(404).json({
       success: false,
       message: "Student not found"
     });
   }
-
-  students = students.filter(item => item.id !== student.id);
 
   res.json({
     success: true,

@@ -3,6 +3,7 @@
   "private": true,
   "dependencies": {
     "cors": "^2.8.6",
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "mongodb": "^7.7.0"
   }
 }
