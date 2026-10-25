@@ -230,7 +230,8 @@ router.put("/:id", async (req, res) => {
 // DELETE: Remove a student
 router.delete("/:id", async (req, res) => {
   const students = await studentsCollection();
-  const result = await students.deleteOne({ id: Number(req.params.id) });
+  const id = Number(req.params.id);
+  const result = await students.deleteOne({ id });
 
   if (result.deletedCount === 0) {
     return res.status(404).json({
@@ -239,9 +240,31 @@ router.delete("/:id", async (req, res) => {
     });
   }
 
+  // Remove the deleted student's login too
+  await (await getDb()).collection("accounts").deleteOne({ studentRef: id });
+
   res.json({
     success: true,
     message: "Student deleted successfully"
+  });
+});
+
+// POST: Reset a student's password back to the default (their surname)
+router.post("/:id/reset-password", async (req, res) => {
+  const student = await findStudent(req.params.id);
+
+  if (!student) {
+    return res.status(404).json({
+      success: false,
+      message: "Student not found"
+    });
+  }
+
+  await (await getDb()).collection("accounts").deleteOne({ studentRef: student.id });
+
+  res.json({
+    success: true,
+    message: "Password reset to the student's surname"
   });
 });
 

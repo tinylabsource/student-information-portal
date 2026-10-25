@@ -2,6 +2,8 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const studentRoutes = require("./routes/studentRoutes");
+const authRoutes = require("./routes/authRoutes");
+const { requireAuth } = require("./auth");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,7 +16,8 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "index.html"));
 });
 
-app.use("/api/students", studentRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/students", requireAuth({ roles: ["admin"] }), studentRoutes);
 
 // Handle invalid routes
 app.use((req, res) => {

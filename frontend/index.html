@@ -497,6 +497,165 @@ tbody tr:hover {
     display: block;
 }
 
+[hidden] {
+    display: none !important;
+}
+
+/* LOGIN / CHANGE PASSWORD */
+.auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: linear-gradient(160deg, var(--dark), #24528a);
+}
+
+.auth-card {
+    background: white;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 15px;
+    padding: 32px 28px;
+    box-shadow: 0 20px 60px #0003;
+}
+
+.auth-card .logo {
+    color: var(--dark);
+    margin-bottom: 26px;
+    padding: 0;
+}
+
+.auth-card h2 {
+    color: var(--dark);
+    margin-bottom: 8px;
+}
+
+.auth-card .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 22px;
+}
+
+.auth-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.auth-card input {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid #dce3ed;
+    border-radius: 8px;
+    outline: none;
+}
+
+.auth-card .btn {
+    padding: 12px 16px;
+    margin-top: 4px;
+}
+
+.auth-card .btn:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+.form-error {
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.auth-note {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.link-btn {
+    background: none;
+    color: var(--primary);
+    font-size: 13px;
+    align-self: center;
+}
+
+/* STUDENT PROFILE */
+.profile-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 30px 16px;
+}
+
+.profile-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 3px 12px #17365d08;
+    overflow: hidden;
+}
+
+.profile-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-head .student-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.profile-head h2 {
+    color: var(--dark);
+    font-size: 21px;
+}
+
+.profile-head p {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.profile-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 24px;
+}
+
+.profile-details dt {
+    font-size: 11px;
+    color: #65758b;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.profile-details dd {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+@media (max-width: 720px) {
+    .profile-details {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 1000px) {
     .sidebar {
         width: 200px;
@@ -536,6 +695,12 @@ tbody tr:hover {
         display: none;
     }
 
+    .topbar-actions {
+        flex-direction: column-reverse;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
     .stats {
         grid-template-columns: 1fr;
     }
@@ -563,7 +728,111 @@ tbody tr:hover {
 
 <body>
 
-<div class="app">
+<!-- LOGIN -->
+<section class="auth-screen" id="loginScreen" hidden>
+    <div class="auth-card">
+        <div class="logo">
+            <span class="logo-icon">🎓</span>
+            <span>Student Portal</span>
+        </div>
+
+        <h2>Log in</h2>
+        <p class="subtitle">Use your student ID and password.
+            First time? Your password is your surname.</p>
+
+        <form id="loginForm">
+            <div class="form-error" id="loginError" hidden></div>
+
+            <div class="field">
+                <label for="loginUsername">Student ID</label>
+                <input id="loginUsername" required autocomplete="username"
+                    placeholder="e.g. 20223059">
+            </div>
+
+            <div class="field">
+                <label for="loginPassword">Password</label>
+                <input id="loginPassword" type="password" required
+                    autocomplete="current-password" placeholder="Password">
+            </div>
+
+            <button type="submit" class="btn" id="loginButton">Log in</button>
+        </form>
+    </div>
+</section>
+
+<!-- CHANGE PASSWORD -->
+<section class="auth-screen" id="passwordScreen" hidden>
+    <div class="auth-card">
+        <div class="logo">
+            <span class="logo-icon">🔒</span>
+            <span>Student Portal</span>
+        </div>
+
+        <h2 id="passwordTitle">Change your password</h2>
+        <p class="subtitle" id="passwordSubtitle"></p>
+
+        <form id="passwordForm">
+            <div class="form-error" id="passwordError" hidden></div>
+
+            <div class="field">
+                <label for="currentPassword">Current Password</label>
+                <input id="currentPassword" type="password" required
+                    autocomplete="current-password">
+            </div>
+
+            <div class="field">
+                <label for="newPassword">New Password</label>
+                <input id="newPassword" type="password" required minlength="8"
+                    autocomplete="new-password">
+            </div>
+
+            <div class="field">
+                <label for="confirmPassword">Confirm New Password</label>
+                <input id="confirmPassword" type="password" required minlength="8"
+                    autocomplete="new-password">
+            </div>
+
+            <p class="auth-note">At least 8 characters, and different from your surname.</p>
+
+            <button type="submit" class="btn" id="passwordButton">Change Password</button>
+            <button type="button" class="link-btn" id="passwordCancel">Cancel</button>
+        </form>
+    </div>
+</section>
+
+<!-- STUDENT PROFILE -->
+<div class="profile-page" id="studentView" hidden>
+    <header class="topbar">
+        <div>
+            <h1>My Profile</h1>
+            <p>Your student information on record.</p>
+        </div>
+
+        <div class="topbar-actions">
+            <button class="btn btn-secondary" id="studentChangePassword">Change Password</button>
+            <button class="btn btn-secondary logout-button">Log out</button>
+        </div>
+    </header>
+
+    <section class="profile-card">
+        <div class="profile-head">
+            <div class="student-avatar" id="profileInitials"></div>
+            <div>
+                <h2 id="profileName"></h2>
+                <p id="profileEmail"></p>
+            </div>
+        </div>
+
+        <dl class="profile-details">
+            <div><dt>Student ID</dt><dd id="profileStudentId"></dd></div>
+            <div><dt>Year Level</dt><dd id="profileYear"></dd></div>
+            <div><dt>Course</dt><dd id="profileCourse"></dd></div>
+            <div><dt>Email Address</dt><dd id="profileEmailDetail"></dd></div>
+        </dl>
+    </section>
+</div>
+
+<div class="app" id="adminView" hidden>
 
     <aside class="sidebar">
         <div class="logo">
@@ -593,12 +862,15 @@ tbody tr:hover {
                 <p>Welcome back! Here's your student overview.</p>
             </div>
 
-            <div class="admin">
-                <div class="avatar">A</div>
-                <div>
-                    <strong>Administrator</strong>
-                    <small>System Manager</small>
+            <div class="topbar-actions">
+                <div class="admin">
+                    <div class="avatar">A</div>
+                    <div>
+                        <strong>Administrator</strong>
+                        <small>System Manager</small>
+                    </div>
                 </div>
+                <button class="btn btn-secondary logout-button">Log out</button>
             </div>
         </header>
 
@@ -759,12 +1031,39 @@ tbody tr:hover {
 let students = [];
 const API = "/api/students";
 
+const TOKEN_KEY = "portalToken";
+
+// Login token lives in sessionStorage so it ends when the browser tab closes
+const session = {
+    get() {
+        try { return sessionStorage.getItem(TOKEN_KEY); } catch { return null; }
+    },
+    set(token) {
+        try { sessionStorage.setItem(TOKEN_KEY, token); } catch {}
+        session.token = token;
+    },
+    clear() {
+        try { sessionStorage.removeItem(TOKEN_KEY); } catch {}
+        session.token = null;
+    },
+    token: null
+};
+session.token = session.get();
+
+let currentUser = null;
+
 async function api(url, options = {}) {
-    const res = await fetch(url, {
-        headers: { "Content-Type": "application/json" },
-        ...options
-    });
+    const headers = { "Content-Type": "application/json" };
+    if (session.token) headers.Authorization = `Bearer ${session.token}`;
+
+    const res = await fetch(url, { headers, ...options });
     const body = await res.json();
+
+    // Expired or invalid login: back to the login screen
+    if (res.status === 401 && session.token) {
+        logout("Your session has ended. Please log in again.");
+    }
+
     if (!body.success) throw new Error(body.message);
     return body;
 }
@@ -863,6 +1162,10 @@ function renderStudents() {
                         <button class="icon-btn"
                             data-action="edit" data-id="${s.id}"
                             title="Edit student" aria-label="Edit student">Edit</button>
+                        <button class="icon-btn"
+                            data-action="reset" data-id="${s.id}"
+                            title="Reset password to surname"
+                            aria-label="Reset password">Reset PW</button>
                         <button class="icon-btn delete"
                             data-action="delete" data-id="${s.id}"
                             title="Delete student" aria-label="Delete student">✕</button>
@@ -989,6 +1292,14 @@ $("studentTable").addEventListener("click", event => {
             openModal(student);
             break;
 
+        case "reset":
+            if (confirm(`Reset ${student.firstName} ${student.lastName}'s password to their surname?`)) {
+                api(`${API}/${id}/reset-password`, { method: "POST" })
+                    .then(() => showToast("Password reset. The student must change it at next login."))
+                    .catch(err => alert(err.message));
+            }
+            break;
+
         case "delete":
             if (confirm(`Delete ${student.firstName} ${student.lastName}?`)) {
                 api(`${API}/${id}`, { method: "DELETE" })
@@ -1000,7 +1311,143 @@ $("studentTable").addEventListener("click", event => {
     }
 });
 
-loadStudents();
+// SCREENS
+const screens = ["loginScreen", "passwordScreen", "studentView", "adminView"];
+
+function showScreen(name) {
+    screens.forEach(id => { $(id).hidden = id !== name; });
+}
+
+function showError(id, message) {
+    $(id).textContent = message;
+    $(id).hidden = !message;
+}
+
+function showLogin(message = "") {
+    closeModal();
+    $("loginForm").reset();
+    showError("loginError", message);
+    showScreen("loginScreen");
+    $("loginUsername").focus();
+}
+
+function showPasswordScreen(required) {
+    $("passwordForm").reset();
+    showError("passwordError", "");
+    $("passwordTitle").textContent = required
+        ? "Set a new password"
+        : "Change your password";
+    $("passwordSubtitle").textContent = required
+        ? "This is your first login. For your security, please replace the default password (your surname) before continuing."
+        : "Enter your current password and choose a new one.";
+    $("passwordCancel").textContent = required ? "Log out" : "Cancel";
+    showScreen("passwordScreen");
+    $("currentPassword").focus();
+}
+
+function showStudentProfile(student) {
+    $("profileInitials").textContent =
+        (student.firstName.charAt(0) + student.lastName.charAt(0)).toUpperCase();
+    $("profileName").textContent = `${student.firstName} ${student.lastName}`;
+    $("profileEmail").textContent = student.email;
+    $("profileStudentId").textContent = student.studentId;
+    $("profileYear").textContent = yearLabel(Number(student.yearLevel));
+    $("profileCourse").textContent = student.course;
+    $("profileEmailDetail").textContent = student.email;
+    showScreen("studentView");
+}
+
+// Route the logged-in user to the right screen
+function enterPortal(user) {
+    currentUser = user;
+
+    if (user.role === "admin") {
+        showScreen("adminView");
+        loadStudents();
+    } else if (user.mustChangePassword) {
+        showPasswordScreen(true);
+    } else {
+        showStudentProfile(user.student);
+    }
+}
+
+function logout(message = "") {
+    session.clear();
+    currentUser = null;
+    students = [];
+    showLogin(message);
+}
+
+$("loginForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    showError("loginError", "");
+    $("loginButton").disabled = true;
+
+    try {
+        const body = await api("/api/auth/login", {
+            method: "POST",
+            body: JSON.stringify({
+                username: $("loginUsername").value.trim(),
+                password: $("loginPassword").value
+            })
+        });
+        session.set(body.token);
+        enterPortal(body.user);
+    } catch (err) {
+        showError("loginError", err.message);
+        $("loginPassword").value = "";
+    } finally {
+        $("loginButton").disabled = false;
+    }
+});
+
+$("passwordForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    if ($("newPassword").value !== $("confirmPassword").value) {
+        return showError("passwordError", "New passwords do not match");
+    }
+
+    showError("passwordError", "");
+    $("passwordButton").disabled = true;
+
+    try {
+        const body = await api("/api/auth/change-password", {
+            method: "POST",
+            body: JSON.stringify({
+                currentPassword: $("currentPassword").value,
+                newPassword: $("newPassword").value
+            })
+        });
+        session.set(body.token);
+        enterPortal(body.user);
+        showToast("Password changed successfully!");
+    } catch (err) {
+        if (session.token) showError("passwordError", err.message);
+    } finally {
+        $("passwordButton").disabled = false;
+    }
+});
+
+$("passwordCancel").addEventListener("click", () =>
+    currentUser.mustChangePassword ? logout() : enterPortal(currentUser));
+$("studentChangePassword").addEventListener("click", () => showPasswordScreen(false));
+
+document.querySelectorAll(".logout-button").forEach(button =>
+    button.addEventListener("click", () => logout()));
+
+// Resume an existing session, or ask the user to log in
+async function start() {
+    if (!session.token) return showLogin();
+
+    try {
+        enterPortal((await api("/api/auth/me")).user);
+    } catch (err) {
+        if (session.token) logout(err.message);
+    }
+}
+
+start();
 </script>
 
 </body>
