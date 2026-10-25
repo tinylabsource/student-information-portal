@@ -585,7 +585,7 @@ tbody tr:hover {
 
 /* STUDENT PROFILE */
 .profile-page {
-    max-width: 720px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 30px 16px;
 }
@@ -648,6 +648,169 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     gap: 14px;
+}
+
+/* GRADES / SCHEDULE / TUITION */
+.profile-page .profile-card {
+    margin-bottom: 22px;
+}
+
+.tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+}
+
+.tab {
+    background: white;
+    color: #475569;
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.tab.active {
+    background: var(--dark);
+    border-color: var(--dark);
+    color: white;
+}
+
+.tab-panel > .panel + .panel,
+.tab-panel > .stats + .panel {
+    margin-top: 20px;
+}
+
+.term-title {
+    padding: 16px 20px 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.term-block + .term-block {
+    border-top: 1px solid var(--border);
+    margin-top: 6px;
+}
+
+.term-summary {
+    padding: 12px 20px 16px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.term-summary strong {
+    color: var(--dark);
+}
+
+.num {
+    text-align: right;
+}
+
+/* Same column widths in every term's table */
+.grades-table {
+    table-layout: fixed;
+}
+
+.grades-table .col-units,
+.grades-table .col-grade { width: 90px; }
+.grades-table .col-remarks { width: 150px; }
+
+.subject-cell {
+    white-space: normal;
+}
+
+.subject-cell strong {
+    display: block;
+    font-weight: 600;
+}
+
+.subject-cell small {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+}
+
+@media (max-width: 720px) {
+    .grades-table th,
+    .grades-table td {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .grades-table th:first-child,
+    .grades-table td:first-child {
+        padding-left: 16px;
+    }
+
+    .grades-table .col-units { width: 52px; }
+    .grades-table .col-grade { width: 58px; }
+    .grades-table .col-remarks { width: 112px; }
+}
+
+tfoot td {
+    font-weight: 700;
+    background: #f8faff;
+}
+
+.remark {
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #f0f4fa;
+    color: #475569;
+}
+
+.remark.passed { background: #dff8eb; color: #146c43; }
+.remark.failed { background: #fee2e2; color: #b91c1c; }
+.remark.pending { background: #fff0d9; color: #95580a; }
+
+.balance-due { color: #b91c1c !important; }
+.balance-clear { color: #146c43 !important; }
+
+.editor table {
+    white-space: normal;
+}
+
+.editor td {
+    padding: 8px 6px;
+    vertical-align: top;
+}
+
+.editor th {
+    padding: 12px 6px;
+}
+
+.editor input {
+    width: 100%;
+    min-width: 96px;
+    padding: 9px 10px;
+    border: 1px solid #dce3ed;
+    border-radius: 7px;
+    outline: none;
+    font-size: 13px;
+}
+
+.editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+}
+
+.editor-actions .spacer {
+    flex: 1;
+}
+
+.section-message {
+    padding: 0 20px 16px;
+    font-size: 12px;
+    color: var(--muted);
 }
 
 @media (max-width: 720px) {
@@ -804,11 +967,12 @@ tbody tr:hover {
 <div class="profile-page" id="studentView" hidden>
     <header class="topbar">
         <div>
-            <h1>My Profile</h1>
-            <p>Your student information on record.</p>
+            <h1 id="profileTitle">My Profile</h1>
+            <p id="profileSubtitle">Your grades, class schedule, and tuition balance.</p>
         </div>
 
         <div class="topbar-actions">
+            <button class="btn btn-secondary" id="backToStudents" hidden>← Back to Students</button>
             <button class="btn btn-secondary" id="studentChangePassword">Change Password</button>
             <button class="btn btn-secondary logout-button">Log out</button>
         </div>
@@ -830,6 +994,42 @@ tbody tr:hover {
             <div><dt>Email Address</dt><dd id="profileEmailDetail"></dd></div>
         </dl>
     </section>
+
+    <nav class="tabs" aria-label="Student record">
+        <button class="tab active" data-tab="grades">Grades</button>
+        <button class="tab" data-tab="schedule">Schedule</button>
+        <button class="tab" data-tab="tuition">Tuition</button>
+    </nav>
+
+    <div class="tab-panel" id="tab-grades">
+        <section class="panel" data-section="grades"></section>
+    </div>
+
+    <div class="tab-panel" id="tab-schedule" hidden>
+        <section class="panel" data-section="schedule"></section>
+    </div>
+
+    <div class="tab-panel" id="tab-tuition" hidden>
+        <div class="stats">
+            <div class="stat-card">
+                <p>Total Assessment</p>
+                <h2 id="tuitionTotal">₱0.00</h2>
+                <div class="stat-note">All fees charged</div>
+            </div>
+            <div class="stat-card">
+                <p>Total Paid</p>
+                <h2 id="tuitionPaid">₱0.00</h2>
+                <div class="stat-note" id="tuitionPaidNote">No payments yet</div>
+            </div>
+            <div class="stat-card">
+                <p>Remaining Balance</p>
+                <h2 id="tuitionBalance">₱0.00</h2>
+                <div class="stat-note" id="tuitionBalanceNote"></div>
+            </div>
+        </div>
+        <section class="panel" data-section="fees"></section>
+        <section class="panel" data-section="payments"></section>
+    </div>
 </div>
 
 <div class="app" id="adminView" hidden>
@@ -1278,14 +1478,7 @@ $("studentTable").addEventListener("click", event => {
 
     switch (button.dataset.action) {
         case "view":
-            alert(
-                `STUDENT DETAILS\n\n` +
-                `Name: ${student.firstName} ${student.lastName}\n` +
-                `Student ID: ${student.studentId}\n` +
-                `Email: ${student.email}\n` +
-                `Course: ${student.course}\n` +
-                `Year Level: ${yearLabel(Number(student.yearLevel))}`
-            );
+            showProfile(student);
             break;
 
         case "edit":
@@ -1345,7 +1538,307 @@ function showPasswordScreen(required) {
     $("currentPassword").focus();
 }
 
-function showStudentProfile(student) {
+// STUDENT RECORD (grades, schedule, tuition)
+// Students see their own; the admin sees any student's and can edit it.
+let record = null;          // { grades, schedule, fees, payments }
+let recordStudent = null;   // student whose record is on screen
+let recordError = "";
+let editingSection = null;  // section currently being edited (admin)
+
+const isAdmin = () => currentUser && currentUser.role === "admin";
+
+const peso = amount => "₱" + Number(amount).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
+const total = rows => rows.reduce((sum, row) => sum + Number(row.amount), 0);
+
+function formatTime(time) {
+    const [hours, minutes] = time.split(":").map(Number);
+    return `${hours % 12 || 12}:${String(minutes).padStart(2, "0")} ${hours < 12 ? "AM" : "PM"}`;
+}
+
+function formatDate(date) {
+    return new Date(`${date}T00:00:00`).toLocaleDateString("en-PH", {
+        year: "numeric", month: "short", day: "numeric"
+    });
+}
+
+// 1.00 is the highest grade, 3.00 is passing, 5.00 is failed
+function gradeRemark(grade) {
+    if (!grade) return ["Not yet posted", "pending"];
+    if (grade === "INC") return ["Incomplete", "pending"];
+    if (grade === "DRP") return ["Dropped", ""];
+    return Number(grade) <= 3 ? ["Passed", "passed"] : ["Failed", "failed"];
+}
+
+const emptyRow = (columns, message) =>
+    `<tr><td colspan="${columns}" class="empty">${message}</td></tr>`;
+
+function gradesView(rows) {
+    if (!rows.length) {
+        return `<div class="empty">No grades posted yet.</div>`;
+    }
+
+    // Group subjects by term, keeping the order they were entered
+    const terms = [...new Set(rows.map(row => row.term))];
+
+    return terms.map(term => {
+        const subjects = rows.filter(row => row.term === term);
+        const graded = subjects.filter(row => Number(row.grade) && row.units > 0);
+        const units = subjects.reduce((sum, row) => sum + row.units, 0);
+        const gradedUnits = graded.reduce((sum, row) => sum + row.units, 0);
+        const gwa = gradedUnits
+            ? (graded.reduce((sum, row) => sum + Number(row.grade) * row.units, 0) /
+                gradedUnits).toFixed(2)
+            : "—";
+
+        return `
+            <div class="term-block">
+                <h3 class="term-title">${escapeHTML(term)}</h3>
+                <div class="table-wrap">
+                    <table class="grades-table">
+                        <colgroup>
+                            <col><col class="col-units"><col class="col-grade"><col class="col-remarks">
+                        </colgroup>
+                        <thead><tr>
+                            <th>Subject</th><th class="num">Units</th>
+                            <th class="num">Grade</th><th>Remarks</th>
+                        </tr></thead>
+                        <tbody>${subjects.map(row => {
+                            const [remark, style] = gradeRemark(row.grade);
+                            return `<tr>
+                                <td class="subject-cell">
+                                    <strong>${escapeHTML(row.title)}</strong>
+                                    <small>${escapeHTML(row.code)}</small>
+                                </td>
+                                <td class="num">${row.units}</td>
+                                <td class="num"><strong>${escapeHTML(row.grade || "—")}</strong></td>
+                                <td><span class="remark ${style}">${remark}</span></td>
+                            </tr>`;
+                        }).join("")}</tbody>
+                    </table>
+                </div>
+                <p class="term-summary">
+                    Total units: <strong>${units}</strong> &nbsp;·&nbsp;
+                    General weighted average (GWA): <strong>${gwa}</strong>
+                </p>
+            </div>`;
+    }).join("");
+}
+
+function scheduleView(rows) {
+    const sorted = [...rows].sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    return `
+        <div class="table-wrap">
+            <table>
+                <thead><tr>
+                    <th>Code</th><th>Subject</th><th>Days</th><th>Time</th>
+                    <th>Room</th><th>Instructor</th>
+                </tr></thead>
+                <tbody>${sorted.length ? sorted.map(row => `<tr>
+                    <td><span class="id-badge">${escapeHTML(row.code)}</span></td>
+                    <td>${escapeHTML(row.title)}</td>
+                    <td>${escapeHTML(row.days)}</td>
+                    <td>${formatTime(row.startTime)} – ${formatTime(row.endTime)}</td>
+                    <td>${escapeHTML(row.room || "—")}</td>
+                    <td>${escapeHTML(row.instructor || "—")}</td>
+                </tr>`).join("") : emptyRow(6, "No classes scheduled yet.")}</tbody>
+            </table>
+        </div>`;
+}
+
+function feesView(rows) {
+    return `
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Description</th><th class="num">Amount</th></tr></thead>
+                <tbody>${rows.length ? rows.map(row => `<tr>
+                    <td>${escapeHTML(row.description)}</td>
+                    <td class="num">${peso(row.amount)}</td>
+                </tr>`).join("") : emptyRow(2, "No fees assessed yet.")}</tbody>
+                ${rows.length ? `<tfoot><tr>
+                    <td>Total Assessment</td><td class="num">${peso(total(rows))}</td>
+                </tr></tfoot>` : ""}
+            </table>
+        </div>`;
+}
+
+function paymentsView(rows) {
+    return `
+        <div class="table-wrap">
+            <table>
+                <thead><tr>
+                    <th>Date</th><th>Reference / OR No.</th><th class="num">Amount</th>
+                </tr></thead>
+                <tbody>${rows.length ? rows.map(row => `<tr>
+                    <td>${formatDate(row.date)}</td>
+                    <td>${escapeHTML(row.reference || "—")}</td>
+                    <td class="num">${peso(row.amount)}</td>
+                </tr>`).join("") : emptyRow(3, "No payments recorded yet.")}</tbody>
+                ${rows.length ? `<tfoot><tr>
+                    <td colspan="2">Total Paid</td><td class="num">${peso(total(rows))}</td>
+                </tr></tfoot>` : ""}
+            </table>
+        </div>`;
+}
+
+// Columns double as the admin's edit form
+const SECTIONS = {
+    grades: {
+        title: "Grades",
+        subtitle: "1.00 is the highest grade, 3.00 is passing, 5.00 is failed.",
+        view: gradesView,
+        columns: [
+            { key: "term", label: "Term", placeholder: "1st Sem 2026-2027" },
+            { key: "code", label: "Code", placeholder: "IT 301" },
+            { key: "title", label: "Subject", placeholder: "Web Development" },
+            { key: "units", label: "Units", type: "number", step: "0.5", placeholder: "3" },
+            { key: "grade", label: "Grade", placeholder: "1.00–5.00, INC, DRP" }
+        ]
+    },
+    schedule: {
+        title: "Class Schedule",
+        subtitle: "Weekly classes for the current term.",
+        view: scheduleView,
+        columns: [
+            { key: "code", label: "Code", placeholder: "IT 301" },
+            { key: "title", label: "Subject", placeholder: "Web Development" },
+            { key: "days", label: "Days", placeholder: "MWF" },
+            { key: "startTime", label: "Start", type: "time" },
+            { key: "endTime", label: "End", type: "time" },
+            { key: "room", label: "Room", placeholder: "Optional" },
+            { key: "instructor", label: "Instructor", placeholder: "Optional" }
+        ]
+    },
+    fees: {
+        title: "Assessment of Fees",
+        subtitle: "Tuition and other fees charged.",
+        view: feesView,
+        columns: [
+            { key: "description", label: "Description", placeholder: "Tuition Fee" },
+            { key: "amount", label: "Amount (₱)", type: "number", step: "0.01", placeholder: "0.00" }
+        ]
+    },
+    payments: {
+        title: "Payments",
+        subtitle: "Payments received.",
+        view: paymentsView,
+        columns: [
+            { key: "date", label: "Date", type: "date" },
+            { key: "reference", label: "Reference / OR No.", placeholder: "Optional" },
+            { key: "amount", label: "Amount (₱)", type: "number", step: "0.01", placeholder: "0.00" }
+        ]
+    }
+};
+
+function editorRow(section, row = {}) {
+    return `<tr>${SECTIONS[section].columns.map(column => `
+        <td><input data-key="${column.key}" type="${column.type || "text"}"
+            ${column.step ? `step="${column.step}" min="0"` : ""}
+            placeholder="${escapeHTML(column.placeholder || "")}"
+            aria-label="${escapeHTML(column.label)}"
+            value="${escapeHTML(row[column.key] ?? "")}"></td>`).join("")}
+        <td><button type="button" class="icon-btn delete" data-remove-row
+            aria-label="Remove row" title="Remove row">✕</button></td>
+    </tr>`;
+}
+
+function editorView(section) {
+    const { columns } = SECTIONS[section];
+
+    return `
+        <form class="editor" data-editor="${section}">
+            <div class="table-wrap">
+                <table>
+                    <thead><tr>
+                        ${columns.map(column => `<th>${escapeHTML(column.label)}</th>`).join("")}
+                        <th></th>
+                    </tr></thead>
+                    <tbody>${record[section].map(row => editorRow(section, row)).join("")}</tbody>
+                </table>
+            </div>
+            <div class="editor-actions">
+                <button type="button" class="btn btn-secondary" data-add-row>＋ Add Row</button>
+                <span class="spacer"></span>
+                <button type="button" class="btn btn-secondary" data-cancel-edit>Cancel</button>
+                <button type="submit" class="btn">Save</button>
+            </div>
+        </form>`;
+}
+
+function renderSection(section) {
+    const config = SECTIONS[section];
+    const editing = editingSection === section;
+    const canEdit = isAdmin() && record && !editingSection;
+
+    let body;
+    if (recordError) body = `<div class="empty">${escapeHTML(recordError)}</div>`;
+    else if (!record) body = `<div class="empty">Loading…</div>`;
+    else body = editing ? editorView(section) : config.view(record[section]);
+
+    document.querySelector(`[data-section="${section}"]`).innerHTML = `
+        <div class="panel-header">
+            <div>
+                <h2>${config.title}</h2>
+                <p>${config.subtitle}</p>
+            </div>
+            ${canEdit ? `<button class="btn btn-secondary" data-edit="${section}">Edit</button>` : ""}
+        </div>
+        ${body}`;
+}
+
+function renderTuitionSummary() {
+    const fees = record ? total(record.fees) : 0;
+    const paid = record ? total(record.payments) : 0;
+    const balance = fees - paid;
+
+    $("tuitionTotal").textContent = peso(fees);
+    $("tuitionPaid").textContent = peso(paid);
+    $("tuitionPaidNote").textContent = record && record.payments.length
+        ? `${record.payments.length} payment(s)`
+        : "No payments yet";
+
+    $("tuitionBalance").textContent = peso(Math.max(balance, 0));
+    $("tuitionBalance").className =
+        balance > 0 ? "balance-due" : fees > 0 ? "balance-clear" : "";
+    $("tuitionBalanceNote").textContent =
+        balance > 0 ? "Amount still due" :
+        balance < 0 ? `Overpaid by ${peso(-balance)}` :
+        fees > 0 ? "Fully paid" : "No fees assessed yet";
+}
+
+function renderRecord() {
+    Object.keys(SECTIONS).forEach(renderSection);
+    renderTuitionSummary();
+}
+
+function selectTab(name) {
+    document.querySelectorAll(".tab").forEach(tab =>
+        tab.classList.toggle("active", tab.dataset.tab === name));
+    document.querySelectorAll(".tab-panel").forEach(panel => {
+        panel.hidden = panel.id !== `tab-${name}`;
+    });
+}
+
+// Show a student's profile and record (own record for students)
+async function showProfile(student) {
+    const admin = isAdmin();
+
+    recordStudent = student;
+    record = null;
+    recordError = "";
+    editingSection = null;
+
+    $("profileTitle").textContent = admin ? "Student Record" : "My Profile";
+    $("profileSubtitle").textContent = admin
+        ? "View and update this student's grades, schedule, and tuition."
+        : "Your grades, class schedule, and tuition balance.";
+    $("backToStudents").hidden = !admin;
+    $("studentChangePassword").hidden = admin;
+
     $("profileInitials").textContent =
         (student.firstName.charAt(0) + student.lastName.charAt(0)).toUpperCase();
     $("profileName").textContent = `${student.firstName} ${student.lastName}`;
@@ -1354,8 +1847,87 @@ function showStudentProfile(student) {
     $("profileYear").textContent = yearLabel(Number(student.yearLevel));
     $("profileCourse").textContent = student.course;
     $("profileEmailDetail").textContent = student.email;
+
+    selectTab("grades");
+    renderRecord();
     showScreen("studentView");
+    window.scrollTo(0, 0);
+
+    try {
+        const body = await api(admin ? `/api/records/${student.id}` : "/api/records/me");
+        if (recordStudent !== student) return; // another student was opened meanwhile
+        record = body.data;
+    } catch (err) {
+        if (recordStudent !== student) return;
+        recordError = "Could not load records: " + err.message;
+    }
+
+    renderRecord();
 }
+
+document.querySelectorAll(".tab").forEach(tab =>
+    tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
+
+$("backToStudents").addEventListener("click", () => {
+    recordStudent = null;
+    showScreen("adminView");
+    loadStudents();
+});
+
+// Admin editing: Edit / Add Row / Remove / Cancel
+$("studentView").addEventListener("click", event => {
+    const target = event.target.closest("button");
+    if (!target) return;
+
+    if (target.dataset.edit) {
+        editingSection = target.dataset.edit;
+        renderRecord();
+    } else if (target.hasAttribute("data-add-row")) {
+        const form = target.closest("form");
+        form.querySelector("tbody")
+            .insertAdjacentHTML("beforeend", editorRow(form.dataset.editor));
+        form.querySelector("tbody tr:last-child input").focus();
+    } else if (target.hasAttribute("data-remove-row")) {
+        target.closest("tr").remove();
+    } else if (target.hasAttribute("data-cancel-edit")) {
+        editingSection = null;
+        renderRecord();
+    }
+});
+
+$("studentView").addEventListener("submit", async event => {
+    const form = event.target.closest("form[data-editor]");
+    if (!form) return;
+    event.preventDefault();
+
+    const section = form.dataset.editor;
+    const student = recordStudent;
+
+    // Read each row, skipping rows left completely blank
+    const rows = [...form.querySelectorAll("tbody tr")]
+        .map(tr => Object.fromEntries([...tr.querySelectorAll("input")]
+            .map(input => [input.dataset.key, input.value.trim()])))
+        .filter(row => Object.values(row).some(Boolean));
+
+    const saveButton = form.querySelector('button[type="submit"]');
+    saveButton.disabled = true;
+
+    try {
+        const body = await api(`/api/records/${student.id}/${section}`, {
+            method: "PUT",
+            body: JSON.stringify({ rows })
+        });
+        if (recordStudent !== student) return;
+        record[section] = body.data;
+        editingSection = null;
+        renderRecord();
+        showToast(`${SECTIONS[section].title} saved.`);
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        saveButton.disabled = false;
+    }
+});
 
 // Route the logged-in user to the right screen
 function enterPortal(user) {
@@ -1367,7 +1939,7 @@ function enterPortal(user) {
     } else if (user.mustChangePassword) {
         showPasswordScreen(true);
     } else {
-        showStudentProfile(user.student);
+        showProfile(user.student);
     }
 }
 
@@ -1375,6 +1947,8 @@ function logout(message = "") {
     session.clear();
     currentUser = null;
     students = [];
+    recordStudent = null;
+    record = null;
     showLogin(message);
 }
 

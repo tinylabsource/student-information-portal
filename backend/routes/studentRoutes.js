@@ -240,8 +240,10 @@ router.delete("/:id", async (req, res) => {
     });
   }
 
-  // Remove the deleted student's login too
-  await (await getDb()).collection("accounts").deleteOne({ studentRef: id });
+  // Remove the deleted student's login and records too
+  const db = await getDb();
+  await db.collection("accounts").deleteOne({ studentRef: id });
+  await db.collection("records").deleteOne({ studentRef: id });
 
   res.json({
     success: true,

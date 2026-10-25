@@ -31,6 +31,9 @@ async function connect() {
   // Changed passwords, one per student (links to students.id)
   await db.collection("accounts").createIndex({ studentRef: 1 }, { unique: true });
 
+  // Grades, schedule, and tuition, one per student (links to students.id)
+  await db.collection("records").createIndex({ studentRef: 1 }, { unique: true });
+
   // First run: fill an empty database with the sample students
   if ((await students.countDocuments()) === 0) {
     await students.insertMany(sampleStudents.map(student => ({ ...student })));

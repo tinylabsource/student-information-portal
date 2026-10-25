@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const studentRoutes = require("./routes/studentRoutes");
 const authRoutes = require("./routes/authRoutes");
+const recordRoutes = require("./routes/recordRoutes");
 const { requireAuth } = require("./auth");
 
 const app = express();
@@ -17,6 +18,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/records", recordRoutes);
 app.use("/api/students", requireAuth({ roles: ["admin"] }), studentRoutes);
 
 // Handle invalid routes
