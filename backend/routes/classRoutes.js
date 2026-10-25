@@ -3,7 +3,12 @@ const router = express.Router();
 
 const { getDb, nextId } = require("../db");
 const { requireAuth } = require("../auth");
-const { textField, numberField, gradeField } = require("../validators");
+const {
+  textField,
+  numberField,
+  timeField,
+  gradeField
+} = require("../validators");
 
 const adminOnly = requireAuth({ roles: ["admin"] });
 const MAX_STUDENTS = 500;
@@ -15,8 +20,35 @@ const fields = {
   term: ["Term", textField({ max: 60 })],
   code: ["Subject code", textField({ max: 30 })],
   title: ["Subject", textField()],
-  units: ["Units", numberField({ max: 12, decimals: 1 })]
+  units: ["Units", numberField({ max: 12, decimals: 1 })],
+  room: ["Room", textField({ required: false, max: 50 })]
 };
+
+// Optional weekly schedule: days (e.g. "MWF") with a start and end time.
+// Either all three are given or none.
+function validateSchedule(data) {
+  const days = textField({ required: false, max: 30 })(data.days, "Days");
+  const startTime = String(data.startTime ?? "").trim();
+  const endTime = String(data.endTime ?? "").trim();
+
+  if (!days && !startTime && !endTime) {
+    return { days: "", startTime: "", endTime: "" };
+  }
+
+  if (!days) throw "Choose the days this class meets";
+
+  const schedule = {
+    days,
+    startTime: timeField(startTime, "Start time"),
+    endTime: timeField(endTime, "End time")
+  };
+
+  if (schedule.endTime <= schedule.startTime) {
+    throw "End time must be after start time";
+  }
+
+  return schedule;
+}
 
 const classesCollection = async () => (await getDb()).collection("classes");
 
@@ -35,6 +67,7 @@ async function validateClass(data) {
       details[key] = validate(data[key], label);
     }
 
+    Object.assign(details, validateSchedule(data));
     details.instructorRef = Number(data.instructorRef);
     const db = await getDb();
 

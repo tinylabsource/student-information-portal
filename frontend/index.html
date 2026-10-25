@@ -670,6 +670,61 @@ tbody tr:hover {
     outline: none;
 }
 
+.schedule-fields {
+    border: none;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    gap: 12px;
+}
+
+.schedule-fields legend {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    padding-right: 8px;
+}
+
+.schedule-fields legend span {
+    font-weight: 400;
+    color: var(--muted);
+}
+
+.day-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.day-picker label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
+    border: 1px solid #dce3ed;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+}
+
+.day-picker label:has(input:checked) {
+    background: #eaf1ff;
+    border-color: var(--primary);
+    color: #1d4ed8;
+}
+
+.day-picker input {
+    accent-color: var(--primary);
+}
+
+.schedule-cell small {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+}
+
 #enrollSelect {
     flex: 1;
     min-width: 200px;
@@ -1085,6 +1140,7 @@ tfoot td {
                     <tr>
                         <th>Subject</th>
                         <th>Term</th>
+                        <th>Schedule</th>
                         <th>Units</th>
                         <th>Students</th>
                         <th>Progress</th>
@@ -1312,6 +1368,7 @@ tfoot td {
                         <tr>
                             <th>Subject</th>
                             <th>Term</th>
+                            <th>Schedule</th>
                             <th>Units</th>
                             <th>Instructor</th>
                             <th>Students</th>
@@ -1469,6 +1526,37 @@ tfoot td {
                     <label for="classInstructor">Instructor</label>
                     <select id="classInstructor" required></select>
                 </div>
+
+                <fieldset class="field full schedule-fields">
+                    <legend>Schedule <span>(optional)</span></legend>
+
+                    <div class="day-picker" id="classDays" role="group" aria-label="Days">
+                        <label><input type="checkbox" value="M">Mon</label>
+                        <label><input type="checkbox" value="T">Tue</label>
+                        <label><input type="checkbox" value="W">Wed</label>
+                        <label><input type="checkbox" value="Th">Thu</label>
+                        <label><input type="checkbox" value="F">Fri</label>
+                        <label><input type="checkbox" value="S">Sat</label>
+                        <label><input type="checkbox" value="Su">Sun</label>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="classStart">Start Time</label>
+                            <input id="classStart" type="time">
+                        </div>
+
+                        <div class="field">
+                            <label for="classEnd">End Time</label>
+                            <input id="classEnd" type="time">
+                        </div>
+
+                        <div class="field full">
+                            <label for="classRoom">Room</label>
+                            <input id="classRoom" placeholder="e.g. Lab 2, Rm 204">
+                        </div>
+                    </div>
+                </fieldset>
             </div>
 
             <div class="modal-actions">
@@ -2018,6 +2106,10 @@ function editorView(section) {
                 Grades from classes are given by instructors (see Classes) and are
                 not listed here. Use this list for other grades, such as credited subjects.
             </p>` : ""}
+            ${section === "schedule" ? `<p class="section-message">
+                Schedules of the student's classes come from Classes and are not
+                listed here. Use this list for anything else on their timetable.
+            </p>` : ""}
             <div class="table-wrap">
                 <table>
                     <thead><tr>
@@ -2045,9 +2137,10 @@ function renderSection(section) {
     if (recordError) body = `<div class="empty">${escapeHTML(recordError)}</div>`;
     else if (!record) body = `<div class="empty">Loading…</div>`;
     else if (editing) body = editorView(section);
-    else body = config.view(section === "grades"
-        ? [...(record.classGrades || []), ...record.grades]
-        : record[section]);
+    else body = config.view(
+        section === "grades" ? [...(record.classGrades || []), ...record.grades] :
+        section === "schedule" ? [...(record.classSchedule || []), ...record.schedule] :
+        record[section]);
 
     document.querySelector(`[data-section="${section}"]`).innerHTML = `
         <div class="panel-header">
@@ -2284,12 +2377,25 @@ const classSubjectCell = c => `
         <small>${escapeHTML(c.code)}</small>
     </td>`;
 
+// "MWF" <-> ["M", "W", "F"] (Th and Su are two letters)
+const DAY_ORDER = ["M", "T", "W", "Th", "F", "S", "Su"];
+const splitDays = days => (days || "").match(/Th|Su|M|T|W|F|S/g) || [];
+
+const hasSchedule = c => Boolean(c.days && c.startTime && c.endTime);
+const scheduleTime = c => `${formatTime(c.startTime)} – ${formatTime(c.endTime)}`;
+
+const classScheduleCell = c => hasSchedule(c)
+    ? `<td class="schedule-cell">${escapeHTML(c.days)} ${scheduleTime(c)}
+        ${c.room ? `<small>${escapeHTML(c.room)}</small>` : ""}</td>`
+    : `<td class="schedule-cell"><small>Not set</small></td>`;
+
 function renderClasses() {
     $("classTable").innerHTML = classes.length
         ? classes.map(c => `
             <tr>
                 ${classSubjectCell(c)}
                 <td>${escapeHTML(c.term)}</td>
+                ${classScheduleCell(c)}
                 <td>${c.units}</td>
                 <td>${escapeHTML(c.instructorName || "—")}</td>
                 <td>${c.studentCount}</td>
@@ -2305,7 +2411,7 @@ function renderClasses() {
                     </div>
                 </td>
             </tr>`).join("")
-        : emptyRow(6, "No classes yet. Add a class and assign an instructor.");
+        : emptyRow(7, "No classes yet. Add a class and assign an instructor.");
 }
 
 function renderInstructorClasses() {
@@ -2316,6 +2422,7 @@ function renderInstructorClasses() {
                 <tr>
                     ${classSubjectCell(c)}
                     <td>${escapeHTML(c.term)}</td>
+                    ${classScheduleCell(c)}
                     <td>${c.units}</td>
                     <td>${c.studentCount}</td>
                     <td><span class="remark ${done ? "passed" : "pending"}">
@@ -2323,18 +2430,18 @@ function renderInstructorClasses() {
                     <td><button class="btn" data-open-class="${c.id}">Give Grades</button></td>
                 </tr>`;
         }).join("")
-        : emptyRow(6, "You have no classes yet. The administrator assigns classes to instructors.");
+        : emptyRow(7, "You have no classes yet. The administrator assigns classes to instructors.");
 }
 
 function showInstructorHome() {
     $("instructorGreeting").textContent =
         `Welcome, ${personName(currentUser.profile)}. Open a class to give grades.`;
-    $("instructorClassTable").innerHTML = emptyRow(6, "Loading…");
+    $("instructorClassTable").innerHTML = emptyRow(7, "Loading…");
     showScreen("instructorView");
 
     loadClasses().catch(err => {
         $("instructorClassTable").innerHTML =
-            emptyRow(6, escapeHTML("Could not load classes: " + err.message));
+            emptyRow(7, escapeHTML("Could not load classes: " + err.message));
     });
 }
 
@@ -2445,6 +2552,14 @@ function openClassModal(cls = null) {
         $("classSubject").value = cls.title;
         $("classTerm").value = cls.term;
         $("classInstructor").value = cls.instructorRef;
+        $("classStart").value = cls.startTime || "";
+        $("classEnd").value = cls.endTime || "";
+        $("classRoom").value = cls.room || "";
+
+        const days = splitDays(cls.days);
+        document.querySelectorAll("#classDays input").forEach(box => {
+            box.checked = days.includes(box.value);
+        });
     }
 
     $("classModal").classList.add("show");
@@ -2462,7 +2577,12 @@ $("classForm").addEventListener("submit", async event => {
         units: Number($("classUnits").value),
         title: $("classSubject").value.trim(),
         term: $("classTerm").value.trim(),
-        instructorRef: Number($("classInstructor").value)
+        instructorRef: Number($("classInstructor").value),
+        days: DAY_ORDER.filter(day =>
+            document.querySelector(`#classDays input[value="${day}"]`).checked).join(""),
+        startTime: $("classStart").value,
+        endTime: $("classEnd").value,
+        room: $("classRoom").value.trim()
     };
 
     try {
@@ -2569,8 +2689,13 @@ function renderClass() {
     const cls = openClass;
 
     $("classTitle").textContent = `${cls.code} — ${cls.title}`;
-    $("classSubtitle").textContent =
-        `${cls.term} · ${cls.units} units · Instructor: ${cls.instructorName || "—"}`;
+    $("classSubtitle").textContent = [
+        cls.term,
+        `${cls.units} units`,
+        hasSchedule(cls) ? `${cls.days} ${scheduleTime(cls)}` : "No schedule set",
+        cls.room,
+        `Instructor: ${cls.instructorName || "—"}`
+    ].filter(Boolean).join(" · ");
 
     // Admin: enroll students who are not in the class yet
     $("enrollBar").hidden = !admin;

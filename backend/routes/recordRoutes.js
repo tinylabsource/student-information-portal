@@ -115,7 +115,25 @@ async function getRecord(studentRef) {
     };
   });
 
-  return { ...emptyRecord(), ...record, classGrades };
+  // Weekly schedules of the student's classes (the `schedule` section holds
+  // entries the admin added by hand)
+  const classSchedule = classes
+    .filter(c => c.days && c.startTime && c.endTime)
+    .map(c => {
+      const instructor = instructors.find(i => i.id === c.instructorRef);
+
+      return {
+        code: c.code,
+        title: c.title,
+        days: c.days,
+        startTime: c.startTime,
+        endTime: c.endTime,
+        room: c.room || "",
+        instructor: instructor ? `${instructor.firstName} ${instructor.lastName}` : ""
+      };
+    });
+
+  return { ...emptyRecord(), ...record, classGrades, classSchedule };
 }
 
 async function studentExists(id) {
