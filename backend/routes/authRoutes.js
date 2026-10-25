@@ -13,36 +13,83 @@ const {
 const ADMIN_USERNAME = "admin";
 const MIN_PASSWORD_LENGTH = 8;
 
+// People who log in with an ID number. Their default password is their
+// surname until they change it (no account document yet).
+const ROLES = {
+  student: {
+    people: "students",
+    loginField: "studentId",
+    accounts: "accounts",
+    ref: "studentRef"
+  },
+  instructor: {
+    people: "instructors",
+    loginField: "instructorId",
+    accounts: "instructorAccounts",
+    ref: "instructorRef"
+  }
+};
+
 // Hide MongoDB's internal _id from API responses
 const hideMongoId = { projection: { _id: 0 } };
 
-const collections = async () => {
+// Find who a login ID belongs to: { role, person } or null
+async function findByLoginId(loginId) {
   const db = await getDb();
-  return {
-    students: db.collection("students"),
-    accounts: db.collection("accounts")
-  };
-};
 
-// The default password is the student's surname (case-insensitive)
-const isDefaultPassword = (password, student) =>
-  password.trim().toLowerCase() === student.lastName.trim().toLowerCase();
+  for (const [role, config] of Object.entries(ROLES)) {
+    const person = await db.collection(config.people).findOne(
+      { [config.loginField]: loginId },
+      { ...hideMongoId, collation: caseInsensitive }
+    );
+
+    if (person) return { role, person };
+  }
+
+  return null;
+}
+
+async function findPerson(role, id) {
+  const db = await getDb();
+  return db.collection(ROLES[role].people).findOne({ id }, hideMongoId);
+}
+
+async function findAccount(role, person) {
+  const db = await getDb();
+  const { accounts, ref } = ROLES[role];
+  return db.collection(accounts).findOne({ [ref]: person.id });
+}
+
+// The default password is the person's surname (case-insensitive)
+const isDefaultPassword = (password, person) =>
+  password.trim().toLowerCase() === person.lastName.trim().toLowerCase();
+
+const passwordMatches = async (password, person, account) =>
+  account
+    ? verifyPassword(password, account.passwordHash)
+    : isDefaultPassword(password, person);
 
 const invalidLogin = res =>
   res.status(401).json({
     success: false,
-    message: "Invalid student ID or password"
+    message: "Invalid ID or password"
   });
 
-function sessionResponse(res, user, student = null) {
+const accountGone = res =>
+  res.status(401).json({
+    success: false,
+    message: "Account no longer exists"
+  });
+
+function sessionResponse(res, user, profile = null) {
   res.json({
     success: true,
     token: createToken(user),
-    user: { ...user, student }
+    user: { ...user, profile }
   });
 }
 
-// POST: Log in as a student (student ID + password) or as the admin
+// POST: Log in as a student or instructor (ID + password) or as the admin
 router.post("/login", async (req, res) => {
   const username = String(req.body?.username || "").trim();
   const password = String(req.body?.password || "");
@@ -50,7 +97,7 @@ router.post("/login", async (req, res) => {
   if (!username || !password) {
     return res.status(400).json({
       success: false,
-      message: "Student ID and password are required"
+      message: "ID and password are required"
     });
   }
 
@@ -64,86 +111,64 @@ router.post("/login", async (req, res) => {
     return sessionResponse(res, { role: "admin" });
   }
 
-  const { students, accounts } = await collections();
-  const student = await students.findOne(
-    { studentId: username },
-    { ...hideMongoId, collation: caseInsensitive }
-  );
+  const found = await findByLoginId(username);
+  if (!found) return invalidLogin(res);
 
-  if (!student) return invalidLogin(res);
+  const { role, person } = found;
+  const account = await findAccount(role, person);
 
-  // No account yet means the student has never changed the default password
-  const account = await accounts.findOne({ studentRef: student.id });
-
-  const valid = account
-    ? await verifyPassword(password, account.passwordHash)
-    : isDefaultPassword(password, student);
-
-  if (!valid) return invalidLogin(res);
+  if (!(await passwordMatches(password, person, account))) {
+    return invalidLogin(res);
+  }
 
   sessionResponse(
     res,
-    { role: "student", id: student.id, mustChangePassword: !account },
-    student
+    { role, id: person.id, mustChangePassword: !account },
+    person
   );
 });
 
-// GET: The logged-in user (and their student record)
+// GET: The logged-in user (and their student or instructor profile)
 router.get(
   "/me",
   requireAuth({ allowPasswordChange: true }),
   async (req, res) => {
-    if (req.user.role === "admin") {
-      return res.json({ success: true, user: { role: "admin", student: null } });
+    const { role, id } = req.user;
+
+    if (role === "admin") {
+      return res.json({ success: true, user: { role, profile: null } });
     }
 
-    const { students } = await collections();
-    const student = await students.findOne({ id: req.user.id }, hideMongoId);
-
-    if (!student) {
-      return res.status(401).json({
-        success: false,
-        message: "Student account no longer exists"
-      });
-    }
+    const person = await findPerson(role, id);
+    if (!person) return accountGone(res);
 
     res.json({
       success: true,
       user: {
-        role: "student",
-        id: student.id,
+        role,
+        id,
         mustChangePassword: Boolean(req.user.mustChangePassword),
-        student
+        profile: person
       }
     });
   }
 );
 
-// POST: Change the logged-in student's password
+// POST: Change the logged-in student's or instructor's password
 router.post(
   "/change-password",
-  requireAuth({ roles: ["student"], allowPasswordChange: true }),
+  requireAuth({ roles: Object.keys(ROLES), allowPasswordChange: true }),
   async (req, res) => {
+    const { role, id } = req.user;
     const currentPassword = String(req.body?.currentPassword || "");
     const newPassword = String(req.body?.newPassword || "");
 
-    const { students, accounts } = await collections();
-    const student = await students.findOne({ id: req.user.id }, hideMongoId);
+    const person = await findPerson(role, id);
+    if (!person) return accountGone(res);
 
-    if (!student) {
-      return res.status(401).json({
-        success: false,
-        message: "Student account no longer exists"
-      });
-    }
+    const account = await findAccount(role, person);
 
-    const account = await accounts.findOne({ studentRef: student.id });
-
-    const currentValid = account
-      ? await verifyPassword(currentPassword, account.passwordHash)
-      : isDefaultPassword(currentPassword, student);
-
-    if (!currentValid) {
+    if (!(await passwordMatches(currentPassword, person, account))) {
       return res.status(400).json({
         success: false,
         message: "Current password is incorrect"
@@ -157,15 +182,18 @@ router.post(
       });
     }
 
-    if (isDefaultPassword(newPassword, student) || newPassword === currentPassword) {
+    if (isDefaultPassword(newPassword, person) || newPassword === currentPassword) {
       return res.status(400).json({
         success: false,
         message: "New password must be different from your current password"
       });
     }
 
-    await accounts.updateOne(
-      { studentRef: student.id },
+    const { accounts, ref } = ROLES[role];
+    const db = await getDb();
+
+    await db.collection(accounts).updateOne(
+      { [ref]: id },
       {
         $set: {
           passwordHash: await hashPassword(newPassword),
@@ -175,11 +203,7 @@ router.post(
       { upsert: true }
     );
 
-    sessionResponse(
-      res,
-      { role: "student", id: student.id, mustChangePassword: false },
-      student
-    );
+    sessionResponse(res, { role, id, mustChangePassword: false }, person);
   }
 );
 

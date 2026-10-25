@@ -3,54 +3,15 @@ const router = express.Router();
 
 const { getDb } = require("../db");
 const { requireAuth } = require("../auth");
+const {
+  textField,
+  numberField,
+  timeField,
+  dateField,
+  gradeField
+} = require("../validators");
 
 const MAX_ROWS = 200;
-
-// FIELD VALIDATORS: each returns the cleaned value or throws a message
-
-const textField = ({ required = true, max = 120 } = {}) => (value, label) => {
-  const text = value === null || value === undefined ? "" : String(value).trim();
-
-  if (required && !text) throw `${label} is required`;
-  if (text.length > max) throw `${label} must be at most ${max} characters`;
-  return text;
-};
-
-const numberField = ({ min = 0, max, decimals = 2 }) => (value, label) => {
-  const number = Number(value);
-
-  if (value === "" || value === null || !Number.isFinite(number) ||
-      number < min || number > max) {
-    throw `${label} must be a number from ${min} to ${max}`;
-  }
-
-  return Math.round(number * 10 ** decimals) / 10 ** decimals;
-};
-
-const patternField = (regex, hint) => (value, label) => {
-  const text = String(value ?? "").trim();
-
-  if (!regex.test(text)) throw `${label} must be ${hint}`;
-  return text;
-};
-
-const timeField = patternField(/^([01]\d|2[0-3]):[0-5]\d$/, "a time like 08:30");
-const dateField = patternField(/^\d{4}-\d{2}-\d{2}$/, "a date like 2026-08-15");
-
-// 1.00 (highest) to 5.00 (failed), INC, DRP, or blank (not yet posted)
-function gradeField(value, label) {
-  const text = String(value ?? "").trim().toUpperCase();
-
-  if (!text || text === "INC" || text === "DRP") return text;
-
-  const number = Number(text);
-
-  if (!Number.isFinite(number) || number < 1 || number > 5) {
-    throw `${label} must be 1.00 to 5.00, INC, DRP, or blank`;
-  }
-
-  return number.toFixed(2);
-}
 
 // SECTIONS: the lists kept for each student, field by field
 const sections = {
@@ -130,7 +91,31 @@ async function getRecord(studentRef) {
     { projection: { _id: 0, studentRef: 0, updatedAt: 0 } }
   );
 
-  return { ...emptyRecord(), ...record };
+  // Grades given by instructors in the student's classes (read-only here;
+  // the `grades` section holds grades the admin entered by hand)
+  const classes = await db.collection("classes")
+    .find({ students: studentRef }, { projection: { _id: 0 } })
+    .sort({ id: 1 })
+    .toArray();
+
+  const instructors = await db.collection("instructors")
+    .find({ id: { $in: classes.map(c => c.instructorRef) } }, { projection: { _id: 0 } })
+    .toArray();
+
+  const classGrades = classes.map(c => {
+    const instructor = instructors.find(i => i.id === c.instructorRef);
+
+    return {
+      term: c.term,
+      code: c.code,
+      title: c.title,
+      units: c.units,
+      grade: c.grades?.[studentRef] || "",
+      instructor: instructor ? `${instructor.firstName} ${instructor.lastName}` : ""
+    };
+  });
+
+  return { ...emptyRecord(), ...record, classGrades };
 }
 
 async function studentExists(id) {

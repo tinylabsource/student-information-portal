@@ -650,6 +650,38 @@ tbody tr:hover {
     gap: 14px;
 }
 
+/* INSTRUCTORS / CLASSES */
+.admin-tabs {
+    margin-bottom: 20px;
+}
+
+.btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.grade-select {
+    padding: 8px 10px;
+    min-width: 92px;
+    border: 1px solid #dce3ed;
+    border-radius: 7px;
+    background: white;
+    color: var(--text);
+    outline: none;
+}
+
+#enrollSelect {
+    flex: 1;
+    min-width: 200px;
+    font-size: 13px;
+}
+
+@media (max-width: 720px) {
+    .roster-course {
+        display: none;
+    }
+}
+
 /* GRADES / SCHEDULE / TUITION */
 .profile-page .profile-card {
     margin-bottom: 22px;
@@ -900,14 +932,14 @@ tfoot td {
         </div>
 
         <h2>Log in</h2>
-        <p class="subtitle">Use your student ID and password.
+        <p class="subtitle">Students and instructors: use your ID number.
             First time? Your password is your surname.</p>
 
         <form id="loginForm">
             <div class="form-error" id="loginError" hidden></div>
 
             <div class="field">
-                <label for="loginUsername">Student ID</label>
+                <label for="loginUsername">ID Number</label>
                 <input id="loginUsername" required autocomplete="username"
                     placeholder="e.g. 20223059">
             </div>
@@ -1032,6 +1064,87 @@ tfoot td {
     </div>
 </div>
 
+<!-- INSTRUCTOR: MY CLASSES -->
+<div class="profile-page" id="instructorView" hidden>
+    <header class="topbar">
+        <div>
+            <h1>My Classes</h1>
+            <p id="instructorGreeting"></p>
+        </div>
+
+        <div class="topbar-actions">
+            <button class="btn btn-secondary" id="instructorChangePassword">Change Password</button>
+            <button class="btn btn-secondary logout-button">Log out</button>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Term</th>
+                        <th>Units</th>
+                        <th>Students</th>
+                        <th>Progress</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="instructorClassTable"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<!-- CLASS: CLASS LIST AND GRADES (instructor and admin) -->
+<div class="profile-page" id="classView" hidden>
+    <header class="topbar">
+        <div>
+            <h1 id="classTitle"></h1>
+            <p id="classSubtitle"></p>
+        </div>
+
+        <div class="topbar-actions">
+            <button class="btn btn-secondary" id="classBack">← Back</button>
+            <button class="btn btn-secondary logout-button">Log out</button>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Class List &amp; Grades</h2>
+                <p>1.00 is the highest grade, 3.00 is passing, 5.00 is failed.
+                    Choose a grade for each student, then save.</p>
+            </div>
+            <button class="btn" id="saveGradesButton" disabled>Save Grades</button>
+        </div>
+
+        <div class="filters" id="enrollBar" hidden>
+            <select id="enrollSelect" aria-label="Student to enroll"></select>
+            <button class="btn btn-secondary" id="enrollButton">＋ Enroll Student</button>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th class="roster-course">Course &amp; Year</th>
+                        <th>Grade</th>
+                        <th>Remarks</th>
+                        <th id="rosterActionsHead" hidden></th>
+                    </tr>
+                </thead>
+                <tbody id="rosterTable"></tbody>
+            </table>
+        </div>
+
+        <div class="table-footer" id="rosterFooter"></div>
+    </section>
+</div>
+
 <div class="app" id="adminView" hidden>
 
     <aside class="sidebar">
@@ -1041,8 +1154,9 @@ tfoot td {
         </div>
 
         <p class="nav-label">MAIN MENU</p>
-        <a href="#dashboard" class="nav-item active">▦ &nbsp; Dashboard</a>
-        <a href="#students" class="nav-item">♙ &nbsp; Students</a>
+        <a href="#students" class="nav-item active" data-admin-tab="students">♙ &nbsp; Students</a>
+        <a href="#instructors" class="nav-item" data-admin-tab="instructors">✎ &nbsp; Instructors</a>
+        <a href="#classes" class="nav-item" data-admin-tab="classes">▦ &nbsp; Classes</a>
 
         <p class="nav-label">MANAGEMENT</p>
         <a href="#students" class="nav-item" id="addNav">＋ &nbsp; Add Student</a>
@@ -1106,6 +1220,12 @@ tfoot td {
             </div>
         </section>
 
+        <nav class="tabs admin-tabs" aria-label="Manage">
+            <button class="tab active" data-admin-tab="students">Students</button>
+            <button class="tab" data-admin-tab="instructors">Instructors</button>
+            <button class="tab" data-admin-tab="classes">Classes</button>
+        </nav>
+
         <section class="panel" id="students">
             <div class="panel-header">
                 <div>
@@ -1151,6 +1271,56 @@ tfoot td {
             </div>
 
             <div class="table-footer" id="tableFooter"></div>
+        </section>
+
+        <section class="panel" id="instructorsPanel" hidden>
+            <div class="panel-header">
+                <div>
+                    <h2>Instructors</h2>
+                    <p>Instructors log in with their instructor ID. Their first password is their surname.</p>
+                </div>
+                <button class="btn" id="addInstructorButton">＋ Add Instructor</button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Instructor</th>
+                            <th>Instructor ID</th>
+                            <th>Classes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="instructorTable"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" id="classesPanel" hidden>
+            <div class="panel-header">
+                <div>
+                    <h2>Classes</h2>
+                    <p>Each class has one instructor, who gives grades to its enrolled students.</p>
+                </div>
+                <button class="btn" id="addClassButton">＋ Add Class</button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Term</th>
+                            <th>Units</th>
+                            <th>Instructor</th>
+                            <th>Students</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classTable"></tbody>
+                </table>
+            </div>
         </section>
     </main>
 </div>
@@ -1219,6 +1389,91 @@ tfoot td {
                 <button type="submit" class="btn" id="saveButton">
                     Save Student
                 </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ADD / EDIT INSTRUCTOR MODAL -->
+<div class="modal-overlay" id="instructorModal">
+    <div class="modal">
+        <h2 id="instructorModalTitle">Add Instructor</h2>
+        <p class="subtitle">The instructor logs in with this ID. Their first password is their surname.</p>
+
+        <form id="instructorForm">
+            <input type="hidden" id="instructorRecordId">
+
+            <div class="form-grid">
+                <div class="field full">
+                    <label for="instructorLoginId">Instructor ID</label>
+                    <input id="instructorLoginId" required placeholder="e.g. T-2026-001">
+                </div>
+
+                <div class="field">
+                    <label for="instructorFirstName">First Name</label>
+                    <input id="instructorFirstName" required placeholder="First name">
+                </div>
+
+                <div class="field">
+                    <label for="instructorLastName">Last Name</label>
+                    <input id="instructorLastName" required placeholder="Last name">
+                </div>
+
+                <div class="field full">
+                    <label for="instructorEmail">Email Address</label>
+                    <input id="instructorEmail" type="email" required
+                        placeholder="instructor@example.com">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+                <button type="submit" class="btn">Save Instructor</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ADD / EDIT CLASS MODAL -->
+<div class="modal-overlay" id="classModal">
+    <div class="modal">
+        <h2 id="classModalTitle">Add Class</h2>
+        <p class="subtitle">After saving, open the class from the list to enroll students.</p>
+
+        <form id="classForm">
+            <input type="hidden" id="classRecordId">
+
+            <div class="form-grid">
+                <div class="field">
+                    <label for="classCode">Subject Code</label>
+                    <input id="classCode" required placeholder="IT 301">
+                </div>
+
+                <div class="field">
+                    <label for="classUnits">Units</label>
+                    <input id="classUnits" type="number" min="0" max="12" step="0.5"
+                        required placeholder="3">
+                </div>
+
+                <div class="field full">
+                    <label for="classSubject">Subject</label>
+                    <input id="classSubject" required placeholder="Web Development">
+                </div>
+
+                <div class="field full">
+                    <label for="classTerm">Term</label>
+                    <input id="classTerm" required placeholder="1st Sem 2026-2027">
+                </div>
+
+                <div class="field full">
+                    <label for="classInstructor">Instructor</label>
+                    <select id="classInstructor" required></select>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+                <button type="submit" class="btn">Save Class</button>
             </div>
         </form>
     </div>
@@ -1418,7 +1673,8 @@ function openModal(student = null) {
 }
 
 function closeModal() {
-    $("modalOverlay").classList.remove("show");
+    document.querySelectorAll(".modal-overlay.show")
+        .forEach(overlay => overlay.classList.remove("show"));
 }
 
 $("addButton").addEventListener("click", () => openModal());
@@ -1428,9 +1684,12 @@ $("addNav").addEventListener("click", event => {
 });
 $("cancelButton").addEventListener("click", closeModal);
 
-$("modalOverlay").addEventListener("click", event => {
-    if (event.target === $("modalOverlay")) closeModal();
-});
+document.querySelectorAll(".modal-overlay").forEach(overlay =>
+    overlay.addEventListener("click", event => {
+        if (event.target === overlay) closeModal();
+    }));
+document.querySelectorAll("[data-close-modal]").forEach(button =>
+    button.addEventListener("click", closeModal));
 
 document.addEventListener("keydown", event => {
     if (event.key === "Escape") closeModal();
@@ -1505,7 +1764,10 @@ $("studentTable").addEventListener("click", event => {
 });
 
 // SCREENS
-const screens = ["loginScreen", "passwordScreen", "studentView", "adminView"];
+const screens = [
+    "loginScreen", "passwordScreen", "studentView",
+    "instructorView", "classView", "adminView"
+];
 
 function showScreen(name) {
     screens.forEach(id => { $(id).hidden = id !== name; });
@@ -1611,7 +1873,8 @@ function gradesView(rows) {
                             return `<tr>
                                 <td class="subject-cell">
                                     <strong>${escapeHTML(row.title)}</strong>
-                                    <small>${escapeHTML(row.code)}</small>
+                                    <small>${escapeHTML(row.code)}${row.instructor
+                                        ? ` · ${escapeHTML(row.instructor)}` : ""}</small>
                                 </td>
                                 <td class="num">${row.units}</td>
                                 <td class="num"><strong>${escapeHTML(row.grade || "—")}</strong></td>
@@ -1751,6 +2014,10 @@ function editorView(section) {
 
     return `
         <form class="editor" data-editor="${section}">
+            ${section === "grades" ? `<p class="section-message">
+                Grades from classes are given by instructors (see Classes) and are
+                not listed here. Use this list for other grades, such as credited subjects.
+            </p>` : ""}
             <div class="table-wrap">
                 <table>
                     <thead><tr>
@@ -1777,7 +2044,10 @@ function renderSection(section) {
     let body;
     if (recordError) body = `<div class="empty">${escapeHTML(recordError)}</div>`;
     else if (!record) body = `<div class="empty">Loading…</div>`;
-    else body = editing ? editorView(section) : config.view(record[section]);
+    else if (editing) body = editorView(section);
+    else body = config.view(section === "grades"
+        ? [...(record.classGrades || []), ...record.grades]
+        : record[section]);
 
     document.querySelector(`[data-section="${section}"]`).innerHTML = `
         <div class="panel-header">
@@ -1816,7 +2086,7 @@ function renderRecord() {
 }
 
 function selectTab(name) {
-    document.querySelectorAll(".tab").forEach(tab =>
+    document.querySelectorAll(".tab[data-tab]").forEach(tab =>
         tab.classList.toggle("active", tab.dataset.tab === name));
     document.querySelectorAll(".tab-panel").forEach(panel => {
         panel.hidden = panel.id !== `tab-${name}`;
@@ -1865,12 +2135,13 @@ async function showProfile(student) {
     renderRecord();
 }
 
-document.querySelectorAll(".tab").forEach(tab =>
+document.querySelectorAll(".tab[data-tab]").forEach(tab =>
     tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
 
 $("backToStudents").addEventListener("click", () => {
     recordStudent = null;
     showScreen("adminView");
+    selectAdminTab("students");
     loadStudents();
 });
 
@@ -1929,17 +2200,533 @@ $("studentView").addEventListener("submit", async event => {
     }
 });
 
+// INSTRUCTORS AND CLASSES
+// The admin manages instructors and classes; instructors grade their classes.
+let instructors = [];
+let classes = [];
+let openClass = null;   // class on the class screen, with its roster
+let gradeDraft = {};    // student id -> grade chosen on screen (maybe unsaved)
+
+const GRADE_OPTIONS = [
+    "1.00", "1.25", "1.50", "1.75", "2.00", "2.25", "2.50", "2.75", "3.00",
+    "4.00", "5.00", "INC", "DRP"
+];
+
+const personName = person => `${person.firstName} ${person.lastName}`;
+const sortName = person => `${person.lastName}, ${person.firstName}`;
+const initials = person =>
+    (person.firstName.charAt(0) + person.lastName.charAt(0)).toUpperCase();
+
+async function loadInstructors() {
+    instructors = (await api("/api/instructors")).data;
+    renderInstructors();
+}
+
+async function loadClasses() {
+    classes = (await api("/api/classes")).data;
+    if (isAdmin()) renderClasses();
+    else renderInstructorClasses();
+}
+
+function loadAdminData() {
+    loadStudents();
+    Promise.all([loadInstructors(), loadClasses()])
+        .catch(err => showToast("Could not load data: " + err.message));
+}
+
+function selectAdminTab(name) {
+    document.querySelectorAll("[data-admin-tab]").forEach(item =>
+        item.classList.toggle("active", item.dataset.adminTab === name));
+    $("students").hidden = name !== "students";
+    $("instructorsPanel").hidden = name !== "instructors";
+    $("classesPanel").hidden = name !== "classes";
+}
+
+document.querySelectorAll("[data-admin-tab]").forEach(item =>
+    item.addEventListener("click", event => {
+        event.preventDefault();
+        selectAdminTab(item.dataset.adminTab);
+    }));
+
+function renderInstructors() {
+    $("instructorTable").innerHTML = instructors.length
+        ? instructors.map(i => `
+            <tr>
+                <td>
+                    <div class="student-name">
+                        <div class="student-avatar">${escapeHTML(initials(i))}</div>
+                        <div>
+                            <strong>${escapeHTML(personName(i))}</strong>
+                            <small>${escapeHTML(i.email)}</small>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="id-badge">${escapeHTML(i.instructorId)}</span></td>
+                <td>${i.classCount}</td>
+                <td>
+                    <div class="actions">
+                        <button class="icon-btn" data-instructor-action="edit"
+                            data-id="${i.id}">Edit</button>
+                        <button class="icon-btn" data-instructor-action="reset"
+                            data-id="${i.id}" title="Reset password to surname">Reset PW</button>
+                        <button class="icon-btn delete" data-instructor-action="delete"
+                            data-id="${i.id}" title="Delete instructor"
+                            aria-label="Delete instructor">✕</button>
+                    </div>
+                </td>
+            </tr>`).join("")
+        : emptyRow(4, "No instructors yet. Add one before creating classes.");
+}
+
+const classSubjectCell = c => `
+    <td class="subject-cell">
+        <strong>${escapeHTML(c.title)}</strong>
+        <small>${escapeHTML(c.code)}</small>
+    </td>`;
+
+function renderClasses() {
+    $("classTable").innerHTML = classes.length
+        ? classes.map(c => `
+            <tr>
+                ${classSubjectCell(c)}
+                <td>${escapeHTML(c.term)}</td>
+                <td>${c.units}</td>
+                <td>${escapeHTML(c.instructorName || "—")}</td>
+                <td>${c.studentCount}</td>
+                <td>
+                    <div class="actions">
+                        <button class="icon-btn" data-class-action="open"
+                            data-id="${c.id}">Open</button>
+                        <button class="icon-btn" data-class-action="edit"
+                            data-id="${c.id}">Edit</button>
+                        <button class="icon-btn delete" data-class-action="delete"
+                            data-id="${c.id}" title="Delete class"
+                            aria-label="Delete class">✕</button>
+                    </div>
+                </td>
+            </tr>`).join("")
+        : emptyRow(6, "No classes yet. Add a class and assign an instructor.");
+}
+
+function renderInstructorClasses() {
+    $("instructorClassTable").innerHTML = classes.length
+        ? classes.map(c => {
+            const done = c.studentCount > 0 && c.gradedCount === c.studentCount;
+            return `
+                <tr>
+                    ${classSubjectCell(c)}
+                    <td>${escapeHTML(c.term)}</td>
+                    <td>${c.units}</td>
+                    <td>${c.studentCount}</td>
+                    <td><span class="remark ${done ? "passed" : "pending"}">
+                        ${c.gradedCount} of ${c.studentCount} graded</span></td>
+                    <td><button class="btn" data-open-class="${c.id}">Give Grades</button></td>
+                </tr>`;
+        }).join("")
+        : emptyRow(6, "You have no classes yet. The administrator assigns classes to instructors.");
+}
+
+function showInstructorHome() {
+    $("instructorGreeting").textContent =
+        `Welcome, ${personName(currentUser.profile)}. Open a class to give grades.`;
+    $("instructorClassTable").innerHTML = emptyRow(6, "Loading…");
+    showScreen("instructorView");
+
+    loadClasses().catch(err => {
+        $("instructorClassTable").innerHTML =
+            emptyRow(6, escapeHTML("Could not load classes: " + err.message));
+    });
+}
+
+$("instructorChangePassword").addEventListener("click", () => showPasswordScreen(false));
+
+$("instructorClassTable").addEventListener("click", event => {
+    const button = event.target.closest("[data-open-class]");
+    if (button) showClass(Number(button.dataset.openClass));
+});
+
+// Instructor form (admin)
+function openInstructorModal(instructor = null) {
+    $("instructorForm").reset();
+    $("instructorRecordId").value = instructor ? instructor.id : "";
+    $("instructorModalTitle").textContent =
+        instructor ? "Edit Instructor" : "Add Instructor";
+
+    if (instructor) {
+        $("instructorLoginId").value = instructor.instructorId;
+        $("instructorFirstName").value = instructor.firstName;
+        $("instructorLastName").value = instructor.lastName;
+        $("instructorEmail").value = instructor.email;
+    }
+
+    $("instructorModal").classList.add("show");
+    $("instructorLoginId").focus();
+}
+
+$("addInstructorButton").addEventListener("click", () => openInstructorModal());
+
+$("instructorForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const id = $("instructorRecordId").value;
+    const instructor = {
+        instructorId: $("instructorLoginId").value.trim(),
+        firstName: $("instructorFirstName").value.trim(),
+        lastName: $("instructorLastName").value.trim(),
+        email: $("instructorEmail").value.trim()
+    };
+
+    try {
+        await api(id ? `/api/instructors/${id}` : "/api/instructors", {
+            method: id ? "PUT" : "POST",
+            body: JSON.stringify(instructor)
+        });
+        closeModal();
+        await Promise.all([loadInstructors(), loadClasses()]);
+        showToast(id ? "Instructor updated successfully!" : "Instructor added successfully!");
+    } catch (err) {
+        alert(err.message);
+    }
+});
+
+$("instructorTable").addEventListener("click", async event => {
+    const button = event.target.closest("[data-instructor-action]");
+    if (!button) return;
+
+    const instructor = instructors.find(i => i.id === Number(button.dataset.id));
+    if (!instructor) return;
+
+    const name = personName(instructor);
+
+    try {
+        switch (button.dataset.instructorAction) {
+            case "edit":
+                openInstructorModal(instructor);
+                break;
+
+            case "reset":
+                if (confirm(`Reset ${name}'s password to their surname?`)) {
+                    await api(`/api/instructors/${instructor.id}/reset-password`, { method: "POST" });
+                    showToast("Password reset. The instructor must change it at next login.");
+                }
+                break;
+
+            case "delete":
+                if (confirm(`Delete instructor ${name}?`)) {
+                    await api(`/api/instructors/${instructor.id}`, { method: "DELETE" });
+                    await loadInstructors();
+                    showToast("Instructor deleted successfully.");
+                }
+                break;
+        }
+    } catch (err) {
+        alert(err.message);
+    }
+});
+
+// Class form (admin)
+function openClassModal(cls = null) {
+    if (!instructors.length) {
+        showToast("Add an instructor first.");
+        selectAdminTab("instructors");
+        return;
+    }
+
+    $("classForm").reset();
+    $("classRecordId").value = cls ? cls.id : "";
+    $("classModalTitle").textContent = cls ? "Edit Class" : "Add Class";
+    $("classInstructor").innerHTML = '<option value="">Select instructor</option>' +
+        instructors.map(i => `<option value="${i.id}">
+            ${escapeHTML(personName(i))} (${escapeHTML(i.instructorId)})</option>`).join("");
+
+    if (cls) {
+        $("classCode").value = cls.code;
+        $("classUnits").value = cls.units;
+        $("classSubject").value = cls.title;
+        $("classTerm").value = cls.term;
+        $("classInstructor").value = cls.instructorRef;
+    }
+
+    $("classModal").classList.add("show");
+    $("classCode").focus();
+}
+
+$("addClassButton").addEventListener("click", () => openClassModal());
+
+$("classForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const id = $("classRecordId").value;
+    const details = {
+        code: $("classCode").value.trim(),
+        units: Number($("classUnits").value),
+        title: $("classSubject").value.trim(),
+        term: $("classTerm").value.trim(),
+        instructorRef: Number($("classInstructor").value)
+    };
+
+    try {
+        await api(id ? `/api/classes/${id}` : "/api/classes", {
+            method: id ? "PUT" : "POST",
+            body: JSON.stringify(details)
+        });
+        closeModal();
+        await Promise.all([loadClasses(), loadInstructors()]);
+        showToast(id ? "Class updated successfully!" : "Class created! Open it to enroll students.");
+    } catch (err) {
+        alert(err.message);
+    }
+});
+
+$("classTable").addEventListener("click", async event => {
+    const button = event.target.closest("[data-class-action]");
+    if (!button) return;
+
+    const cls = classes.find(c => c.id === Number(button.dataset.id));
+    if (!cls) return;
+
+    switch (button.dataset.classAction) {
+        case "open":
+            showClass(cls.id);
+            break;
+
+        case "edit":
+            openClassModal(cls);
+            break;
+
+        case "delete":
+            if (!confirm(`Delete ${cls.code} ${cls.title} (${cls.term})? ` +
+                "Grades given in this class will be deleted too.")) break;
+
+            try {
+                await api(`/api/classes/${cls.id}`, { method: "DELETE" });
+                await Promise.all([loadClasses(), loadInstructors()]);
+                showToast("Class deleted successfully.");
+            } catch (err) {
+                alert(err.message);
+            }
+            break;
+    }
+});
+
+// CLASS SCREEN: class list and grades
+async function showClass(id) {
+    openClass = null;
+    gradeDraft = {};
+    $("classTitle").textContent = "Loading…";
+    $("classSubtitle").textContent = "";
+    $("enrollBar").hidden = true;
+    $("rosterActionsHead").hidden = true;
+    $("rosterTable").innerHTML = emptyRow(4, "Loading…");
+    $("rosterFooter").textContent = "";
+    $("saveGradesButton").disabled = true;
+    showScreen("classView");
+    window.scrollTo(0, 0);
+
+    try {
+        setOpenClass((await api(`/api/classes/${id}`)).data);
+    } catch (err) {
+        $("classTitle").textContent = "Class";
+        $("rosterTable").innerHTML =
+            emptyRow(4, escapeHTML("Could not load class: " + err.message));
+    }
+}
+
+// Show a class; optionally keep grades picked on screen but not yet saved
+function setOpenClass(cls, keepDraft = false) {
+    const draft = keepDraft ? gradeDraft : {};
+    openClass = cls;
+    gradeDraft = Object.fromEntries(cls.roster.map(student =>
+        [student.id, student.id in draft ? draft[student.id] : student.grade]));
+    renderClass();
+}
+
+const unsavedGrades = () => openClass
+    ? openClass.roster.filter(student => (gradeDraft[student.id] || "") !== student.grade)
+    : [];
+
+function gradeSelect(student) {
+    const value = gradeDraft[student.id] || "";
+    const options = !value || GRADE_OPTIONS.includes(value)
+        ? GRADE_OPTIONS
+        : [value, ...GRADE_OPTIONS];
+
+    return `<select class="grade-select" data-student="${student.id}"
+        aria-label="Grade for ${escapeHTML(personName(student))}">
+        <option value="">—</option>
+        ${options.map(grade =>
+            `<option${grade === value ? " selected" : ""}>${grade}</option>`).join("")}
+    </select>`;
+}
+
+function remarkBadge(grade) {
+    const [remark, style] = gradeRemark(grade);
+    return `<span class="remark ${style}">${remark}</span>`;
+}
+
+function renderClass() {
+    const admin = isAdmin();
+    const cls = openClass;
+
+    $("classTitle").textContent = `${cls.code} — ${cls.title}`;
+    $("classSubtitle").textContent =
+        `${cls.term} · ${cls.units} units · Instructor: ${cls.instructorName || "—"}`;
+
+    // Admin: enroll students who are not in the class yet
+    $("enrollBar").hidden = !admin;
+    $("rosterActionsHead").hidden = !admin;
+
+    if (admin) {
+        const enrolled = new Set(cls.roster.map(student => student.id));
+        const available = students
+            .filter(student => !enrolled.has(student.id))
+            .sort((a, b) => sortName(a).localeCompare(sortName(b)));
+
+        $("enrollSelect").innerHTML = available.length
+            ? '<option value="">Select a student to enroll…</option>' +
+                available.map(student => `<option value="${student.id}">
+                    ${escapeHTML(sortName(student))} (${escapeHTML(student.studentId)})
+                </option>`).join("")
+            : '<option value="">All students are already enrolled</option>';
+    }
+
+    $("rosterTable").innerHTML = cls.roster.length
+        ? cls.roster.map(student => `
+            <tr>
+                <td class="subject-cell">
+                    <strong>${escapeHTML(sortName(student))}</strong>
+                    <small>${escapeHTML(student.studentId)}</small>
+                </td>
+                <td class="roster-course">${escapeHTML(student.course)} · ${yearLabel(Number(student.yearLevel))}</td>
+                <td>${gradeSelect(student)}</td>
+                <td data-remark="${student.id}">${remarkBadge(gradeDraft[student.id])}</td>
+                ${admin ? `<td><button class="icon-btn delete" data-unenroll="${student.id}"
+                    title="Remove from class" aria-label="Remove from class">✕</button></td>` : ""}
+            </tr>`).join("")
+        : emptyRow(admin ? 5 : 4, admin
+            ? "No students enrolled yet. Choose a student above to enroll them."
+            : "No students are enrolled in this class yet.");
+
+    renderRosterFooter();
+}
+
+function renderRosterFooter() {
+    const graded = openClass.roster.filter(student => gradeDraft[student.id]).length;
+    const unsaved = unsavedGrades().length;
+
+    $("rosterFooter").textContent =
+        `${openClass.roster.length} student(s) · ${graded} graded` +
+        (unsaved ? ` · ${unsaved} unsaved change(s)` : "");
+    $("saveGradesButton").disabled = !unsaved;
+}
+
+$("rosterTable").addEventListener("change", event => {
+    const select = event.target.closest(".grade-select");
+    if (!select) return;
+
+    const id = Number(select.dataset.student);
+    gradeDraft[id] = select.value;
+    document.querySelector(`[data-remark="${id}"]`).innerHTML = remarkBadge(select.value);
+    renderRosterFooter();
+});
+
+async function updateEnrollment(studentIds, message) {
+    const cls = openClass;
+
+    try {
+        const body = await api(`/api/classes/${cls.id}/students`, {
+            method: "PUT",
+            body: JSON.stringify({ students: studentIds })
+        });
+        if (openClass !== cls) return;
+        setOpenClass(body.data, true);
+        showToast(message);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+$("enrollButton").addEventListener("click", () => {
+    const id = Number($("enrollSelect").value);
+    if (!id) return showToast("Choose a student to enroll.");
+
+    updateEnrollment(
+        [...openClass.roster.map(student => student.id), id],
+        "Student enrolled."
+    );
+});
+
+$("rosterTable").addEventListener("click", event => {
+    const button = event.target.closest("[data-unenroll]");
+    if (!button) return;
+
+    const id = Number(button.dataset.unenroll);
+    const student = openClass.roster.find(s => s.id === id);
+
+    if (confirm(`Remove ${personName(student)} from this class? ` +
+        "Their grade in this class will be deleted.")) {
+        updateEnrollment(
+            openClass.roster.map(s => s.id).filter(sid => sid !== id),
+            "Student removed from class."
+        );
+    }
+});
+
+$("saveGradesButton").addEventListener("click", async () => {
+    const cls = openClass;
+    const changed = Object.fromEntries(unsavedGrades()
+        .map(student => [student.id, gradeDraft[student.id] || ""]));
+
+    $("saveGradesButton").disabled = true;
+
+    try {
+        const body = await api(`/api/classes/${cls.id}/grades`, {
+            method: "PUT",
+            body: JSON.stringify({ grades: changed })
+        });
+        if (openClass !== cls) return;
+        setOpenClass(body.data);
+        showToast("Grades saved.");
+    } catch (err) {
+        alert(err.message);
+        if (openClass === cls) renderRosterFooter();
+    }
+});
+
+$("classBack").addEventListener("click", () => {
+    if (unsavedGrades().length &&
+        !confirm("You have unsaved grades. Leave without saving?")) return;
+
+    openClass = null;
+
+    if (isAdmin()) {
+        showScreen("adminView");
+        selectAdminTab("classes");
+        loadClasses().catch(err => showToast("Could not load classes: " + err.message));
+    } else {
+        showInstructorHome();
+    }
+});
+
+// Warn before closing the tab with unsaved grades
+window.addEventListener("beforeunload", event => {
+    if (unsavedGrades().length) event.preventDefault();
+});
+
 // Route the logged-in user to the right screen
 function enterPortal(user) {
     currentUser = user;
 
     if (user.role === "admin") {
         showScreen("adminView");
-        loadStudents();
+        selectAdminTab("students");
+        loadAdminData();
     } else if (user.mustChangePassword) {
         showPasswordScreen(true);
+    } else if (user.role === "instructor") {
+        showInstructorHome();
     } else {
-        showProfile(user.student);
+        showProfile(user.profile);
     }
 }
 
@@ -1949,6 +2736,9 @@ function logout(message = "") {
     students = [];
     recordStudent = null;
     record = null;
+    instructors = [];
+    classes = [];
+    openClass = null;
     showLogin(message);
 }
 

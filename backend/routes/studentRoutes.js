@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { getDb, nextStudentId, caseInsensitive } = require("../db");
+const { getDb, nextStudentId, loginIdTaken } = require("../db");
 
 const fields = [
   "studentId",
@@ -68,19 +68,10 @@ function normalizeStudent(data) {
   };
 }
 
-// Check for duplicate student IDs (case-insensitive)
+// Check for duplicate student IDs (case-insensitive, also among instructors)
 async function hasDuplicateStudentId(studentId, excludeId = null) {
-  const students = await studentsCollection();
-  const query = { studentId };
-
-  if (excludeId !== null) query.id = { $ne: excludeId };
-
-  const count = await students.countDocuments(query, {
-    collation: caseInsensitive,
-    limit: 1
-  });
-
-  return count > 0;
+  const db = await getDb();
+  return loginIdTaken(db, studentId, { collection: "students", id: excludeId });
 }
 
 const isDuplicateKeyError = err => err && err.code === 11000;
@@ -88,7 +79,7 @@ const isDuplicateKeyError = err => err && err.code === 11000;
 const duplicateResponse = res =>
   res.status(409).json({
     success: false,
-    message: "Student ID already exists"
+    message: "Student ID already exists (or is used by an instructor)"
   });
 
 const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -240,10 +231,14 @@ router.delete("/:id", async (req, res) => {
     });
   }
 
-  // Remove the deleted student's login and records too
+  // Remove the deleted student's login, records, and class enrollments too
   const db = await getDb();
   await db.collection("accounts").deleteOne({ studentRef: id });
   await db.collection("records").deleteOne({ studentRef: id });
+  await db.collection("classes").updateMany(
+    { students: id },
+    { $pull: { students: id }, $unset: { [`grades.${id}`]: "" } }
+  );
 
   res.json({
     success: true,
