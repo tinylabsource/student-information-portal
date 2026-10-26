@@ -1,5 +1,13 @@
+const dns = require("dns");
 const { MongoClient } = require("mongodb");
 const sampleStudents = require("./data/students");
+
+// On some Windows networks Node only gets 127.0.0.1 as its DNS server and
+// cannot look up the mongodb+srv:// address; use public DNS instead then.
+const LOOPBACK_DNS = ["127.0.0.1", "::1"];
+if (process.platform === "win32" && dns.getServers().every(s => LOOPBACK_DNS.includes(s))) {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+}
 
 const DB_NAME = process.env.MONGODB_DB || "student_portal";
 
