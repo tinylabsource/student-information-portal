@@ -6,6 +6,7 @@ const authRoutes = require("./routes/authRoutes");
 const recordRoutes = require("./routes/recordRoutes");
 const instructorRoutes = require("./routes/instructorRoutes");
 const classRoutes = require("./routes/classRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 const { requireAuth } = require("./auth");
 
 const app = express();
@@ -22,6 +23,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/records", recordRoutes);
 app.use("/api/classes", classRoutes);
+app.use("/api/chat", chatRoutes);
 app.use("/api/instructors", requireAuth({ roles: ["admin"] }), instructorRoutes);
 app.use("/api/students", requireAuth({ roles: ["admin"] }), studentRoutes);
 
